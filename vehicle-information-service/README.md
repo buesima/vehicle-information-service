@@ -1,5 +1,7 @@
 # Vehicle Information Service
 
+[![Build Status](https://travis-ci.org/Daimler/vehicle-information-service.svg?branch=master)](https://travis-ci.org/Daimler/vehicle-information-service)
+
 This is an implementation of the [Vehicle Information Service standard](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html).
 The goal of the implementation is to make it simple to implement VIS actions for vehicle signals.
 E.g. `Subscribe`, `Get` and `Set`,  while efficiently handling Websocket connections, clients and subscriptions.

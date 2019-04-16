@@ -1,5 +1,7 @@
 # Vehicle Information Service Client
 
+[![Build Status](https://travis-ci.org/Daimler/vehicle-information-service.svg?branch=master)](https://travis-ci.org/Daimler/vehicle-information-service)
+
 This is a client implementation for the [Vehicle Information Service standard](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html).
 
 # NOTICE
