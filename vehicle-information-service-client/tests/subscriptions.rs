@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-#![feature(await_macro, async_await)]
+#![feature(async_await)]
 
 use futures::compat::*;
 use futures::prelude::*;
@@ -10,10 +10,12 @@ use vehicle_information_service_client::*;
 
 #[runtime::test(Native)]
 async fn receive_subscribe_async() -> Result<(), VISClientError> {
-    let client = await!(VISClient::connect("ws://127.0.0.1:14430"))?;
-    let mut sub_stream =
-        await!(client.subscribe_raw("Private.Example.Interval".into(), None)).compat();
-    let subscribe = await!(sub_stream.next()).expect("No next value");
+    let client = VISClient::connect("ws://127.0.0.1:14430").await?;
+    let mut sub_stream = client
+        .subscribe_raw("Private.Example.Interval".into(), None)
+        .await
+        .compat();
+    let subscribe = sub_stream.next().await.expect("No next value");
 
     if let Ok(ActionSuccessResponse::Subscribe {
         request_id,
@@ -39,10 +41,12 @@ async fn receive_subscribe_async() -> Result<(), VISClientError> {
 
 #[runtime::test(Native)]
 async fn receive_subscription_async() -> Result<(), VISClientError> {
-    let client = await!(VISClient::connect("ws://127.0.0.1:14430"))?;
-    let mut sub_stream =
-        await!(client.subscribe::<u32>("Private.Example.Interval".into(), None)).compat();
-    let response = await!(sub_stream.next()).expect("No next value");
+    let client = VISClient::connect("ws://127.0.0.1:14430").await?;
+    let mut sub_stream = client
+        .subscribe::<u32>("Private.Example.Interval".into(), None)
+        .await
+        .compat();
+    let response = sub_stream.next().await.expect("No next value");
     if let Ok((subscription_id, interval)) = response {
         assert!(interval > 0);
         match subscription_id {
