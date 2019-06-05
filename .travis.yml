@@ -1,16 +1,16 @@
 language: rust
 cache: cargo
 before_script:
-  - rustup default nightly-2019-05-09-x86_64-unknown-linux-gnu
-  - rustup component add clippy --toolchain nightly-2019-05-09-x86_64-unknown-linux-gnu
-  - rustup component add rustfmt --toolchain nightly-2019-05-09-x86_64-unknown-linux-gnu
+  - rustup default nightly-2019-06-05-x86_64-unknown-linux-gnu
+  - rustup component add clippy --toolchain nightly-2019-06-05-x86_64-unknown-linux-gnu
+  - rustup component add rustfmt --toolchain nightly-2019-06-05-x86_64-unknown-linux-gnu
 rust:
   - nightly
 matrix:
   fast_finish: true
 script:
-  - cargo +nightly-2019-05-09 check
-  - cargo +nightly-2019-05-09 clippy --all-features -- -D warnings
-  - cargo +nightly-2019-05-09 test --doc
-  - cargo +nightly-2019-05-09 test --lib
-  - cargo +nightly-2019-05-09 fmt --all -- --check
+  - cargo +nightly-2019-06-05 check
+  - cargo +nightly-2019-06-05 clippy --all-features -- -D warnings
+  - cargo +nightly-2019-06-05 test --doc
+  - cargo +nightly-2019-06-05 test --lib
+  - cargo +nightly-2019-06-05 fmt --all -- --check
