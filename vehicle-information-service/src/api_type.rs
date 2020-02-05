@@ -3,14 +3,16 @@
 //!
 //! Types as defined by the VIS specification.
 //!
-use crate::api_error::ActionErrorResponse;
-use actix::Message;
-use serde::de::{self, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use serde_json::{Number, Value};
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::str::FromStr;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+    str::FromStr,
+};
 use uuid;
 
 #[cfg(test)]
@@ -89,8 +91,8 @@ impl Default for ReqID {
     }
 }
 
-/// Custom implementation because by spec it's not a JSON Number or JSON String(UUID)
-/// but a JSON string that contains an UUID or int
+/// Custom implementation because by spec it's not a JSON Number or JSON
+/// String(UUID) but a JSON string that contains an UUID or int
 impl<'de> Deserialize<'de> for ReqID {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -142,8 +144,8 @@ impl<'de> Deserialize<'de> for ReqID {
     }
 }
 
-/// Custom implementation because by spec it's not a JSON Number or JSON String(UUID)
-/// but a JSON string that contains an UUID or int
+/// Custom implementation because by spec it's not a JSON Number or JSON
+/// String(UUID) but a JSON string that contains an UUID or int
 impl Serialize for ReqID {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -158,7 +160,6 @@ impl Serialize for ReqID {
 
 ///
 /// Value returned by the server to uniquely identify each subscription.
-///
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub enum SubscriptionID {
     SubscriptionIDInt(i64),
@@ -223,8 +224,8 @@ impl<'de> Visitor<'de> for SubscriptionIDVisitor {
     }
 }
 
-/// Custom implementation because by spec it's not a JSON Number or JSON String(UUID)
-/// but a JSON string that contains an UUID or int
+/// Custom implementation because by spec it's not a JSON Number or JSON
+/// String(UUID) but a JSON string that contains an UUID or int
 impl Serialize for SubscriptionID {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -237,8 +238,8 @@ impl Serialize for SubscriptionID {
     }
 }
 
-/// Custom implementation because by spec it's not a JSON Number or JSON String(UUID)
-/// but a JSON string that contains an UUID or int
+/// Custom implementation because by spec it's not a JSON Number or JSON
+/// String(UUID) but a JSON string that contains an UUID or int
 impl<'de> Deserialize<'de> for SubscriptionID {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -249,11 +250,11 @@ impl<'de> Deserialize<'de> for SubscriptionID {
 }
 
 ///
-/// The path to the desired vehicle signal(s), as defined by the Vehicle Signal Specification (VSS).
+/// The path to the desired vehicle signal(s), as defined by the Vehicle Signal
+/// Specification (VSS).
 ///
 /// # Examples
 /// `ActionPath("Signal.Vehicle.Speed".to_string())`
-///
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ActionPath(pub String);
 
@@ -292,59 +293,55 @@ impl From<&str> for ActionPath {
 
 ///
 /// [Action](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#action)
-///
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum ActionType {
     ///
-    /// Enables client to pass security tokens for Security Principals to the server to support access-control.
-    ///
+    /// Enables client to pass security tokens for Security Principals to the
+    /// server to support access-control.
     #[serde(alias = "authorize")]
     #[serde(alias = "Authorize")]
     Authorize,
     ///
-    /// Allows the client to request metadata describing signals and data attributes that are potentially accessible.
-    ///
+    /// Allows the client to request metadata describing signals and data
+    /// attributes that are potentially accessible.
     #[serde(alias = "getMetadata")]
     #[serde(alias = "GetMetadata")]
     GetMetadata,
     ///
     /// Enables the client to get a value once.
-    ///
     #[serde(alias = "get")]
     #[serde(alias = "Get")]
     Get,
     ///
     /// Enables the client to set a value once.
-    ///
     #[serde(alias = "set")]
     #[serde(alias = "Set")]
     Set,
     ///
-    /// Enables the client to request notifications containing a JSON data structure with values for one or more vehicle
-    /// signals and/or data attributes. The client requests that it is notified when the signal changes on the server.
-    ///
+    /// Enables the client to request notifications containing a JSON data
+    /// structure with values for one or more vehicle signals and/or data
+    /// attributes. The client requests that it is notified when the signal
+    /// changes on the server.
     #[serde(alias = "subscribe")]
     #[serde(alias = "Subscribe")]
     Subscribe,
     ///
-    /// Enables the server to send notifications to the client containing a JSON data structure with values for one or
-    /// more vehicle signals and/or data attributes.
-    ///
+    /// Enables the server to send notifications to the client containing a JSON
+    /// data structure with values for one or more vehicle signals and/or
+    /// data attributes.
     #[serde(alias = "subscription")]
     #[serde(alias = "Subscription")]
     Subscription,
     ///
-    /// Allows the client to notify the server that it should no longer receive notifications based
-    /// on that subscription.
-    ///
+    /// Allows the client to notify the server that it should no longer receive
+    /// notifications based on that subscription.
     #[serde(alias = "unsubscribe")]
     #[serde(alias = "Unsubscribe")]
     Unsubscribe,
     ///
-    /// Allows the client to notify the server that it should no longer receive notifications for
-    /// any active subscription.
-    ///
+    /// Allows the client to notify the server that it should no longer receive
+    /// notifications for any active subscription.
     #[serde(alias = "unsubscribeAll")]
     #[serde(alias = "UnsubscribeAll")]
     UnsubscribeAll,
@@ -391,7 +388,6 @@ pub enum Action {
     ///
     /// AUTHORIZE request
     /// [Authorize Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-authorizerequest)
-    ///
     #[serde(alias = "authorize")]
     #[serde(alias = "Authorize")]
     Authorize {
@@ -402,7 +398,6 @@ pub enum Action {
     ///
     /// Metadata request
     /// [Metadata Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-metadatarequest)
-    ///
     #[serde(alias = "getMetadata")]
     #[serde(alias = "GetMetadata")]
     GetMetadata {
@@ -413,7 +408,6 @@ pub enum Action {
     ///
     /// GET request
     /// [Get Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-getrequest)
-    ///
     #[serde(alias = "get")]
     #[serde(alias = "Get")]
     Get {
@@ -424,7 +418,6 @@ pub enum Action {
     ///
     /// SET request
     /// [Set Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-setrequest)
-    ///
     #[serde(alias = "set")]
     #[serde(alias = "Set")]
     Set {
@@ -436,7 +429,6 @@ pub enum Action {
     ///
     /// SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
-    ///
     #[serde(alias = "subscribe")]
     #[serde(alias = "Subscribe")]
     Subscribe {
@@ -449,7 +441,6 @@ pub enum Action {
     },
     ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
-    ///
     #[serde(alias = "unsubscribe")]
     #[serde(alias = "Unsubscribe")]
     Unsubscribe {
@@ -460,17 +451,12 @@ pub enum Action {
     },
     ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
-    ///
     #[serde(alias = "unsubscribeAll")]
     #[serde(alias = "UnsubscribeAll")]
     UnsubscribeAll {
         #[serde(rename = "requestId")]
         request_id: ReqID,
     },
-}
-
-impl Message for Action {
-    type Result = Result<ActionSuccessResponse, ActionErrorResponse>;
 }
 
 impl fmt::Display for Action {
@@ -486,7 +472,6 @@ pub enum ActionSuccessResponse {
     ///
     /// Response for successful GET request
     /// [Get Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-getrequest)
-    ///
     Get {
         #[serde(rename = "requestId")]
         request_id: ReqID,
@@ -498,7 +483,6 @@ pub enum ActionSuccessResponse {
     ///
     /// Response for successful SET request
     /// [Set Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-setrequest)
-    ///
     Set {
         #[serde(rename = "requestId")]
         request_id: ReqID,
@@ -508,7 +492,6 @@ pub enum ActionSuccessResponse {
     },
     ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
-    ///
     Unsubscribe {
         #[serde(rename = "requestId")]
         request_id: ReqID,
@@ -520,7 +503,6 @@ pub enum ActionSuccessResponse {
     },
     ///
     /// [Unsubscribe-All Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe-all)
-    ///
     UnsubscribeAll {
         #[serde(rename = "requestId")]
         request_id: ReqID,
@@ -530,7 +512,6 @@ pub enum ActionSuccessResponse {
     },
     ///
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#idl-def-subscriptionnotification)
-    ///
     Subscription {
         #[serde(rename = "subscriptionId")]
         subscription_id: SubscriptionID,
@@ -542,7 +523,6 @@ pub enum ActionSuccessResponse {
     ///
     /// Response for successful SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
-    ///
     Subscribe {
         #[serde(rename = "requestId")]
         request_id: ReqID,
@@ -553,8 +533,3 @@ pub enum ActionSuccessResponse {
         timestamp: u128,
     },
 }
-
-///
-/// Websocket client connection id
-///
-pub type ClientConnectionId = uuid::Uuid;

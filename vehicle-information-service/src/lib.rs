@@ -1,82 +1,22 @@
 // SPDX-License-Identifier: MIT
 
-//!
-//! For more examples check the Github repositories `examples/` folder.
-//!
-//! Example:
-//! ```rust,no_run
-//!
-//! #[macro_use]
-//! extern crate log;
-//!
-//! use actix::prelude::*;
-//! use actix_web::{middleware, web, App, HttpResponse, HttpServer};
-//! use futures::stream::Stream;
-//! use futures_util::try_stream::TryStreamExt;
-//! use futures_util::compat::Stream01CompatExt;
-//! use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-//! use tokio_socketcan;
-//!
-//! use vehicle_information_service::{AppState, KnownError, Router, Set, SignalManager, UpdateSignal};
-//!
-//! const PATH_PRIVATE_EXAMPLE_SOCKETCAN_LAST_FRAME_ID: &str = "Private.Example.SocketCan.Last.Frame.Id";
-//!
-//! env_logger::init();
-//!
-//! let sys = actix::System::new("vis-example");
-//!
-//! let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 14430);
-//!
-//! HttpServer::new(move || {
-//!   let app_state: AppState = Default::default();
-//!
-//!   let can_id_stream = tokio_socketcan::CANSocket::open("vcan0")
-//!          .expect("Failed to initialize CanSocket")
-//!          .compat()
-//!          .map_ok(|frame| frame.id());
-//!
-//!   app_state
-//!     .spawn_stream_signal_source(PATH_PRIVATE_EXAMPLE_SOCKETCAN_LAST_FRAME_ID.into(), can_id_stream);
-//!
-//!   App::new()
-//!     .data(app_state)
-//!     .wrap(middleware::Logger::default())
-//!     .configure(Router::configure_routes)
-//!     .default_service(web::route().to(|| HttpResponse::NotFound()))
-//!   })
-//!   .bind(socket_addr)
-//!   .unwrap()
-//!   .start();
-//!
-//! let _ = sys.run();
-//!```
-//!
+#![recursion_limit = "256"]
 
-#![deny(clippy::all)]
-
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
-
-mod action;
-pub mod api_error;
-pub mod api_type;
+mod api_error;
+mod api_type;
 mod filter;
-mod router;
-mod signal_manager;
+mod signal_server;
+mod websocket_server;
 
-pub use action::set::Set;
-pub use api_error::KnownError;
-pub use api_type::ActionPath;
-pub use router::{AppState, Router};
-pub use signal_manager::{SignalManager, UpdateSignal};
-
-use serde_json::to_string;
+use futures::{channel::mpsc::Sender, select};
+use futures_util::future::FutureExt;
+use signal_server::{Client, ClientAction, SignalServer};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use websocket_server::WebsocketServer;
 
-use crate::api_error::ActionErrorResponse;
-use crate::api_type::ActionSuccessResponse;
+pub use api_error::ActionErrorResponse;
+pub use api_type::{Action, ActionPath, ActionSuccessResponse};
+pub use serde_json::{json, Value};
 
 pub(crate) fn unix_timestamp() -> Option<Duration> {
     SystemTime::now().duration_since(UNIX_EPOCH).ok()
@@ -86,24 +26,27 @@ pub fn unix_timestamp_ms() -> u128 {
     unix_timestamp().map(|t| t.as_millis()).unwrap_or_default()
 }
 
-///
-/// Serialize response type and wrap the result ready to be returned by the websocket lib
-///
-pub(crate) fn serialize_result<F>(
-    result: &Result<ActionSuccessResponse, ActionErrorResponse>,
-    internal_server_error: F,
-) -> String
-where
-    F: FnOnce() -> ActionErrorResponse,
-{
-    match result {
-        Ok(success) => to_string(&success).unwrap_or_else(|_| {
-            let error = internal_server_error();
-            to_string(&error).unwrap_or_default()
-        }),
-        Err(error) => to_string(&error).unwrap_or_else(|_| {
-            let error = internal_server_error();
-            to_string(&error).unwrap_or_default()
-        }),
+pub struct VisServer {
+    signal_server: SignalServer,
+}
+
+impl VisServer {
+    pub fn new() -> Self {
+        Self {
+            signal_server: SignalServer::new(),
+        }
+    }
+
+    pub fn signal_tx(&self) -> Sender<(ActionPath, Value)> {
+        self.signal_server.signals_tx.clone()
+    }
+
+    pub async fn run(&mut self) {
+        let tx_client = self.signal_server.clients_tx.clone();
+
+        select! {
+            _ = self.signal_server.run().fuse() => panic!("Signal server stopped"),
+            _ = WebsocketServer::run(tx_client).fuse() => panic!("Websocket server stopped"),
+        }
     }
 }

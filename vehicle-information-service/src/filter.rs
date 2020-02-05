@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
 
 use crate::api_type::Filters;
+use log::*;
 use serde_json::{Number, Value};
-use std::cmp::{Ord, Ordering};
-use std::ops::Sub;
-use std::time::{Duration, SystemTime};
+use std::{
+    cmp::{Ord, Ordering},
+    ops::Sub,
+    time::{Duration, SystemTime},
+};
 
 #[cfg(test)]
 mod tests {
-    use crate::api_type::{FilterRange, Filters};
-    use crate::filter;
-    use crate::filter::{
-        interval, is_in_filter_range, is_min_change, value_as_number, SerdeNumber,
+    use crate::{
+        api_type::{FilterRange, Filters},
+        filter,
+        filter::{interval, is_in_filter_range, is_min_change, value_as_number, SerdeNumber},
     };
     use serde_json::{json, Value};
     use std::time::{Duration, SystemTime};
@@ -420,8 +423,8 @@ pub enum Error {
 /// Returns:
 /// Ok(true) : E.g. value changed sufficiently or there was no filter set
 /// Ok(false) : Did not reach change threshold
-/// Err(...): Occurs when the value is not an integer, filters only work for ints
-///
+/// Err(...): Occurs when the value is not an integer, filters only work for
+/// ints
 pub fn matches(
     val: &Value,
     last_value: &Option<(SystemTime, Value)>,
@@ -456,7 +459,6 @@ pub fn matches(
 
 ///
 /// Extract a Number from a JSON Value or return Error if not possible.
-///
 fn value_as_number(val: &Value) -> Result<SerdeNumber, Error> {
     if let Value::Number(ref num) = *val {
         Ok(SerdeNumber(num.clone()))
@@ -477,7 +479,6 @@ fn interval(now: SystemTime, last_value: &Option<(SystemTime, Value)>, filters: 
 
 ///
 /// Below or above filter
-///
 fn is_in_filter_range(val: &Value, filters: &Filters) -> Result<bool, Error> {
     if let Some(ref range) = filters.range {
         let num = value_as_number(val)?;
@@ -493,7 +494,6 @@ fn is_in_filter_range(val: &Value, filters: &Filters) -> Result<bool, Error> {
 ///
 /// Changed by at least x compared to last value.
 /// Returns None if there is no last value.
-///
 fn is_min_change(
     val: &Value,
     last_value: &Option<(SystemTime, Value)>,

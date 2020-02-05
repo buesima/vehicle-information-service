@@ -5,11 +5,14 @@
 //! Includes error that are specified in the VIS specifcation [errors](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#errors).
 //!
 use http::status::StatusCode;
-use std::fmt;
-use std::io;
+use log::warn;
+use serde::{Deserialize, Serialize};
+use std::{fmt, io};
 
-use crate::api_type::{ReqID, SubscriptionID};
-use crate::unix_timestamp_ms;
+use crate::{
+    api_type::{ReqID, SubscriptionID},
+    unix_timestamp_ms,
+};
 
 #[cfg(test)]
 mod tests {
@@ -83,23 +86,20 @@ mod tests {
 /// If there is an error with any of the client’s requests,
 /// the server responds with an error number, reason and message.
 /// [Errors Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#errors)
-///
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ActionError {
     ///
     /// HTTP Status Code Number.
-    ///
     #[serde(rename = "number")]
     pub number: u16,
-    // Pre-defined string value that can be used to distinguish between errors that have the same code.
+    // Pre-defined string value that can be used to distinguish between errors that have the same
+    // code.
     /// e.g. user_token_expired, user_token_invalid
-    ///
     #[serde(rename = "reason")]
     pub reason: String,
     ///
     /// Message text describing the cause in more detail.
     /// e.g. User token has expired.
-    ///
     #[serde(rename = "message")]
     pub message: String,
 }
@@ -153,103 +153,95 @@ impl From<StatusCode> for ActionError {
 pub enum ActionErrorResponse {
     /// Error response for Authorize request
     /// [Authorize Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-authorizeerrorresponse)
-    ///
     Authorize {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// Error response for failed GetMetadata request
     /// [Get VSS Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-vsserrorresponse)
-    ///
     GetMetadata {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// Error response for failed GET request
     /// [Get Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-getrequest)
-    ///
     Get {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// Error response for failed SET request
     /// [Set Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-setrequest)
-    ///
     Set {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// Error response for failed SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
-    ///
     Subscribe {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// Error response for failed SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
-    ///
     Subscription {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
-    ///
     SubscriptionNotification {
         #[serde(rename = "error")]
         error: ActionError,
         #[serde(rename = "subscriptionId")]
         subscription_id: SubscriptionID,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
-    ///
     Unsubscribe {
         #[serde(rename = "requestId")]
         request_id: ReqID,
@@ -257,21 +249,20 @@ pub enum ActionErrorResponse {
         error: ActionError,
         #[serde(rename = "subscriptionId")]
         subscription_id: SubscriptionID,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
     ///
     /// [Unsubscribe-All Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-unsubscribeallreq)
-    ///
     UnsubscribeAll {
         #[serde(rename = "requestId")]
         request_id: ReqID,
         #[serde(rename = "error")]
         error: ActionError,
-        /// can currently not be deserialized, serde_json arbitrary precision bug
-        /// https://github.com/serde-rs/json/issues/505
+        /// can currently not be deserialized, serde_json arbitrary precision
+        /// bug https://github.com/serde-rs/json/issues/505
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
@@ -313,6 +304,17 @@ pub fn new_set_error(request_id: ReqID, error: ActionError) -> ActionErrorRespon
 pub fn new_subscribe_error(request_id: ReqID, error: ActionError) -> ActionErrorResponse {
     ActionErrorResponse::Subscribe {
         request_id,
+        error,
+        timestamp: unix_timestamp_ms(),
+    }
+}
+
+pub fn new_subscription_notification_error(
+    subscription_id: SubscriptionID,
+    error: ActionError,
+) -> ActionErrorResponse {
+    ActionErrorResponse::SubscriptionNotification {
+        subscription_id,
         error,
         timestamp: unix_timestamp_ms(),
     }
@@ -363,7 +365,6 @@ pub fn new_deserialization_error() -> ActionError {
 ///
 /// An error that is listed in the specification error table.
 /// [Error Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#errors)
-///
 pub struct KnownError(StatusCode, &'static str, &'static str);
 
 impl From<KnownError> for ActionError {
