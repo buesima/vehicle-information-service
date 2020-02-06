@@ -82,13 +82,11 @@ mod tests {
     }
 }
 
-///
 /// If there is an error with any of the client’s requests,
 /// the server responds with an error number, reason and message.
 /// [Errors Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#errors)
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ActionError {
-    ///
     /// HTTP Status Code Number.
     #[serde(rename = "number")]
     pub number: u16,
@@ -97,7 +95,6 @@ pub struct ActionError {
     /// e.g. user_token_expired, user_token_invalid
     #[serde(rename = "reason")]
     pub reason: String,
-    ///
     /// Message text describing the cause in more detail.
     /// e.g. User token has expired.
     #[serde(rename = "message")]
@@ -163,7 +160,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// Error response for failed GetMetadata request
     /// [Get VSS Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-vsserrorresponse)
     GetMetadata {
@@ -176,7 +172,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// Error response for failed GET request
     /// [Get Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-getrequest)
     Get {
@@ -189,7 +184,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// Error response for failed SET request
     /// [Set Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-setrequest)
     Set {
@@ -202,7 +196,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// Error response for failed SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
     Subscribe {
@@ -215,7 +208,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// Error response for failed SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
     Subscription {
@@ -228,7 +220,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
     SubscriptionNotification {
         #[serde(rename = "error")]
@@ -240,7 +231,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
     Unsubscribe {
         #[serde(rename = "requestId")]
@@ -254,7 +244,6 @@ pub enum ActionErrorResponse {
         #[serde(skip_deserializing, rename = "timestamp")]
         timestamp: u128,
     },
-    ///
     /// [Unsubscribe-All Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-unsubscribeallreq)
     UnsubscribeAll {
         #[serde(rename = "requestId")]
@@ -362,7 +351,6 @@ pub fn new_deserialization_error() -> ActionError {
     StatusCode::BAD_REQUEST.into()
 }
 
-///
 /// An error that is listed in the specification error table.
 /// [Error Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#errors)
 pub struct KnownError(StatusCode, &'static str, &'static str);

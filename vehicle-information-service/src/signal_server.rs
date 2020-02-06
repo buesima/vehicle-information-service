@@ -112,7 +112,6 @@ impl SignalServer {
         }
     }
 
-    ///
     /// Remove a client subscription from the server subscription list.
     /// Client will no longer be notified afterwards.
     fn remove_server_subscription(
@@ -134,7 +133,6 @@ impl SignalServer {
         }
     }
 
-    ///
     /// Responde to a client's `Get` request retrieving the current signal state
     /// from the signal cache.
     fn handle_get(
@@ -157,7 +155,6 @@ impl SignalServer {
         }
     }
 
-    ///
     /// Respond to a client's `Subscribe` request.
     /// The client will be notified of updates for the specified path
     /// afterwards.
@@ -201,7 +198,6 @@ impl SignalServer {
         Ok(response)
     }
 
-    ///
     /// Remove all client subscriptions.
     /// The client will no longer be notified for any of his current
     /// subscriptions.
@@ -225,7 +221,6 @@ impl SignalServer {
         })
     }
 
-    ///
     /// Remove a specified subscription.
     /// The client will no longer be notified for this subscription.
     fn handle_unsubscribe(
@@ -259,7 +254,6 @@ impl SignalServer {
         }
     }
 
-    ///
     /// Respond to a request sent from a client.
     async fn dispatch_client_message(&mut self, socket_addr: SocketAddr, action: Action) {
         let subscriptions = &mut self.subscriptions;
@@ -327,7 +321,6 @@ impl SignalServer {
         }
     }
 
-    ///
     /// Process a client action e.g. connect or disconnect and handle an
     /// incoming client message.
     async fn process_client_requests(&mut self, client_action: ClientAction) {
@@ -362,7 +355,6 @@ impl SignalServer {
         }
     }
 
-    ///
     /// Process incoming signals, storing and distributing them to clients.
     /// Dispatch incoming client requests to be handled.
     pub async fn run(&mut self) {

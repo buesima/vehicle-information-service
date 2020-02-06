@@ -158,7 +158,6 @@ impl Serialize for ReqID {
     }
 }
 
-///
 /// Value returned by the server to uniquely identify each subscription.
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub enum SubscriptionID {
@@ -249,10 +248,8 @@ impl<'de> Deserialize<'de> for SubscriptionID {
     }
 }
 
-///
 /// The path to the desired vehicle signal(s), as defined by the Vehicle Signal
 /// Specification (VSS).
-///
 /// # Examples
 /// `ActionPath("Signal.Vehicle.Speed".to_string())`
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -291,34 +288,28 @@ impl From<&str> for ActionPath {
     }
 }
 
-///
 /// [Action](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#action)
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum ActionType {
-    ///
     /// Enables client to pass security tokens for Security Principals to the
     /// server to support access-control.
     #[serde(alias = "authorize")]
     #[serde(alias = "Authorize")]
     Authorize,
-    ///
     /// Allows the client to request metadata describing signals and data
     /// attributes that are potentially accessible.
     #[serde(alias = "getMetadata")]
     #[serde(alias = "GetMetadata")]
     GetMetadata,
-    ///
     /// Enables the client to get a value once.
     #[serde(alias = "get")]
     #[serde(alias = "Get")]
     Get,
-    ///
     /// Enables the client to set a value once.
     #[serde(alias = "set")]
     #[serde(alias = "Set")]
     Set,
-    ///
     /// Enables the client to request notifications containing a JSON data
     /// structure with values for one or more vehicle signals and/or data
     /// attributes. The client requests that it is notified when the signal
@@ -326,20 +317,17 @@ pub enum ActionType {
     #[serde(alias = "subscribe")]
     #[serde(alias = "Subscribe")]
     Subscribe,
-    ///
     /// Enables the server to send notifications to the client containing a JSON
     /// data structure with values for one or more vehicle signals and/or
     /// data attributes.
     #[serde(alias = "subscription")]
     #[serde(alias = "Subscription")]
     Subscription,
-    ///
     /// Allows the client to notify the server that it should no longer receive
     /// notifications based on that subscription.
     #[serde(alias = "unsubscribe")]
     #[serde(alias = "Unsubscribe")]
     Unsubscribe,
-    ///
     /// Allows the client to notify the server that it should no longer receive
     /// notifications for any active subscription.
     #[serde(alias = "unsubscribeAll")]
@@ -385,7 +373,6 @@ pub struct Filters {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "action", rename_all = "camelCase")]
 pub enum Action {
-    ///
     /// AUTHORIZE request
     /// [Authorize Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-authorizerequest)
     #[serde(alias = "authorize")]
@@ -395,7 +382,6 @@ pub enum Action {
         #[serde(rename = "requestId")]
         request_id: ReqID,
     },
-    ///
     /// Metadata request
     /// [Metadata Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-metadatarequest)
     #[serde(alias = "getMetadata")]
@@ -405,7 +391,6 @@ pub enum Action {
         #[serde(rename = "requestId")]
         request_id: ReqID,
     },
-    ///
     /// GET request
     /// [Get Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-getrequest)
     #[serde(alias = "get")]
@@ -415,7 +400,6 @@ pub enum Action {
         #[serde(rename = "requestId")]
         request_id: ReqID,
     },
-    ///
     /// SET request
     /// [Set Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-setrequest)
     #[serde(alias = "set")]
@@ -426,7 +410,6 @@ pub enum Action {
         #[serde(rename = "requestId")]
         request_id: ReqID,
     },
-    ///
     /// SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
     #[serde(alias = "subscribe")]
@@ -439,7 +422,6 @@ pub enum Action {
         #[serde(skip_serializing_if = "Option::is_none")]
         filters: Option<Filters>,
     },
-    ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
     #[serde(alias = "unsubscribe")]
     #[serde(alias = "Unsubscribe")]
@@ -449,7 +431,6 @@ pub enum Action {
         #[serde(rename = "subscriptionId")]
         subscription_id: SubscriptionID,
     },
-    ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
     #[serde(alias = "unsubscribeAll")]
     #[serde(alias = "UnsubscribeAll")]
@@ -469,7 +450,6 @@ impl fmt::Display for Action {
 #[serde(tag = "action")]
 #[serde(rename_all = "camelCase")]
 pub enum ActionSuccessResponse {
-    ///
     /// Response for successful GET request
     /// [Get Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-getrequest)
     Get {
@@ -480,7 +460,6 @@ pub enum ActionSuccessResponse {
         #[serde(skip_deserializing)]
         timestamp: u128,
     },
-    ///
     /// Response for successful SET request
     /// [Set Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#dfn-setrequest)
     Set {
@@ -490,7 +469,6 @@ pub enum ActionSuccessResponse {
         #[serde(skip_deserializing)]
         timestamp: u128,
     },
-    ///
     /// [Unsubscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe)
     Unsubscribe {
         #[serde(rename = "requestId")]
@@ -501,7 +479,6 @@ pub enum ActionSuccessResponse {
         #[serde(skip_deserializing)]
         timestamp: u128,
     },
-    ///
     /// [Unsubscribe-All Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#unsubscribe-all)
     UnsubscribeAll {
         #[serde(rename = "requestId")]
@@ -510,7 +487,6 @@ pub enum ActionSuccessResponse {
         #[serde(skip_deserializing)]
         timestamp: u128,
     },
-    ///
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#idl-def-subscriptionnotification)
     Subscription {
         #[serde(rename = "subscriptionId")]
@@ -520,7 +496,6 @@ pub enum ActionSuccessResponse {
         #[serde(skip_deserializing)]
         timestamp: u128,
     },
-    ///
     /// Response for successful SUBSCRIBE request
     /// [Subscribe Doc](https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html#subscribe)
     Subscribe {

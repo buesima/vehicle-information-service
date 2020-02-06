@@ -1,27 +1,24 @@
 // SPDX-License-Identifier: MIT
 
 //!
-//! This shows a simple server providing two retrievable signals (via `get` or `subscribe`),
-//! as well as one settable signal.
+//! This shows a simple server providing two retrievable signals (via `get` or
+//! `subscribe`), as well as one settable signal.
 //! For a better understanding of the VIS specification make sure you read the specification `https://w3c.github.io/automotive/vehicle_data/vehicle_information_service.html`.
-//!
 use futures::{channel::mpsc::Sender, select};
-use futures_util::{future::FutureExt, sink::SinkExt};
-use serde_json::{json, Value};
+use futures_util::{
+    compat::Stream01CompatExt, future::FutureExt, sink::SinkExt, stream::StreamExt,
+};
 use log::*;
-use futures_util::stream::StreamExt;
+use serde_json::{json, Value};
 use std::{
     io,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tokio::time;
-use vehicle_information_service::{ActionPath, VisServer};
 use structopt::StructOpt;
-use std::net::SocketAddr;
-use std::net::Ipv4Addr;
-use std::net::IpAddr;
-use futures_util::compat::Stream01CompatExt;
+use tokio::time;
 use tokio_socketcan;
+use vehicle_information_service::{ActionPath, VisServer};
 
 const PATH_PRIVATE_EXAMPLE_PRINT_SET: &str = "Private.Example.Print.Set";
 const PATH_CURRENT_UNIX_TIMESTAMP: &str = "Private.Example.Timestamp";
@@ -48,15 +45,12 @@ struct Opt {
     port: u16,
 }
 
-///
 /// Build with `cargo run --example server --can vcan0 --port 14430`
-///
 /// Connect with websocket client using e.g. wscat
 /// ```
 /// wscat -c "localhost:14430"
 /// { "action": "Subscribe", "path": "Private.Example.Interval", "requestId": 104 }
 /// ```
-///
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
     env_logger::init();
@@ -66,7 +60,6 @@ async fn main() -> Result<(), io::Error> {
     let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), opt.port);
 
     info!("Starting server");
-
 
     let mut vis_server = VisServer::new();
     let signal_tx = vis_server.signal_tx();
@@ -80,11 +73,14 @@ async fn main() -> Result<(), io::Error> {
 
 async fn signal_last_frame_id(can_interface: &str, mut signal_tx: Sender<(ActionPath, Value)>) {
     let mut can_stream = tokio_socketcan::CANSocket::open(can_interface)
-    .unwrap()
-    .compat();
+        .unwrap()
+        .compat();
 
     while let Some(Ok(frame)) = can_stream.next().await {
-        let signal = (PATH_PRIVATE_EXAMPLE_SOCKETCAN_LAST_FRAME_ID.into(), json!(frame.id()));
+        let signal = (
+            PATH_PRIVATE_EXAMPLE_SOCKETCAN_LAST_FRAME_ID.into(),
+            json!(frame.id()),
+        );
         signal_tx.send(signal).await.unwrap();
     }
 }
@@ -99,7 +95,6 @@ async fn signal_current_time(mut signal_tx: Sender<(ActionPath, Value)>) {
             .unwrap();
     }
 }
-
 
 // This `set` recipient will handle incoming SET requests
 // and print the incoming result. Implement `Handler<Set>` in your actors
@@ -140,8 +135,8 @@ async fn signal_current_time(mut signal_tx: Sender<(ActionPath, Value)>) {
 // impl Handler<Set> for PrintSetRecipient {
 //     type Result = Result<(), KnownError>;
 
-//     fn handle(&mut self, msg: Set, _ctx: &mut Context<Self>) -> Result<(), KnownError> {
-//         info!("Received SET for path `{}`, value: {}", msg.path, msg.value);
-//         Ok(())
+//     fn handle(&mut self, msg: Set, _ctx: &mut Context<Self>) -> Result<(),
+// KnownError> {         info!("Received SET for path `{}`, value: {}",
+// msg.path, msg.value);         Ok(())
 //     }
 // }

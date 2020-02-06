@@ -418,7 +418,6 @@ pub enum Error {
     ValueIsNotANumber,
 }
 
-///
 /// Does the val match the filter criteria
 /// Returns:
 /// Ok(true) : E.g. value changed sufficiently or there was no filter set
@@ -457,7 +456,6 @@ pub fn matches(
     Ok(changed_exp && filters_exp)
 }
 
-///
 /// Extract a Number from a JSON Value or return Error if not possible.
 fn value_as_number(val: &Value) -> Result<SerdeNumber, Error> {
     if let Value::Number(ref num) = *val {
@@ -477,7 +475,6 @@ fn interval(now: SystemTime, last_value: &Option<(SystemTime, Value)>, filters: 
     })
 }
 
-///
 /// Below or above filter
 fn is_in_filter_range(val: &Value, filters: &Filters) -> Result<bool, Error> {
     if let Some(ref range) = filters.range {
@@ -491,7 +488,6 @@ fn is_in_filter_range(val: &Value, filters: &Filters) -> Result<bool, Error> {
     }
 }
 
-///
 /// Changed by at least x compared to last value.
 /// Returns None if there is no last value.
 fn is_min_change(
