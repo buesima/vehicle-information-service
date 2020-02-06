@@ -61,7 +61,7 @@ async fn main() -> Result<(), io::Error> {
 
     info!("Starting server");
 
-    let mut vis_server = VisServer::new();
+    let mut vis_server = VisServer::new(socket_addr);
     let signal_tx = vis_server.signal_tx();
 
     select! {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-use crate::{Action, ActionErrorResponse, ActionSuccessResponse, Client, ClientAction};
+use crate::{Action, ActionErrorResponse, ActionSuccessResponse, ClientAction};
 use futures::{
     channel::mpsc::{channel, Receiver, Sender},
     future, pin_mut,
@@ -10,7 +10,7 @@ use futures::{
 use futures_util::sink::SinkExt;
 use log::*;
 use serde_json::from_str;
-use std::{collections::HashMap, env, net::SocketAddr};
+use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::WebSocketStream;
 use tungstenite::Message;
@@ -36,17 +36,10 @@ impl WebsocketServer {
         let (to_client_tx, to_client_rx) = channel(MAX_CLIENT_SEND_BUFFER);
         let (outgoing, incoming) = ws_stream.split();
 
-        let client = Client {
-            socket_addr: socket_addr.clone(),
-            to_client_tx: to_client_tx.clone(), // Must be cloned, the channel is closed otherwise
-            subscriptions: HashMap::new(),
-            periodic_subscription_handles: HashMap::new(),
-        };
-
         tx_client_action
             .send(ClientAction::Connected {
                 socket_addr,
-                client,
+                to_client_tx,
             })
             .await
             .unwrap();
@@ -132,15 +125,11 @@ impl WebsocketServer {
         Ok(())
     }
 
-    pub async fn run(tx_client_action: Sender<ClientAction>) {
-        let addr = env::args()
-            .nth(1)
-            .unwrap_or_else(|| "127.0.0.1:8080".to_string());
-
-        info!("Listening on: {}", addr);
+    pub async fn run(socket_addr: &SocketAddr, tx_client_action: Sender<ClientAction>) {
+        info!("Listening on: {}", socket_addr);
 
         // Create the event loop and TCP listener we'll accept connections on.
-        let try_socket = TcpListener::bind(&addr).await;
+        let try_socket = TcpListener::bind(&socket_addr).await;
         let mut listener = try_socket.expect("Failed to bind");
 
         // Let's spawn the handling of each connection in a separate task.
