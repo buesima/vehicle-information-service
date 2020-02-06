@@ -13,13 +13,19 @@ use futures_util::{future::FutureExt, sink::SinkExt, stream::StreamExt};
 use http::status::StatusCode;
 use log::*;
 use serde_json::Value;
-use std::{collections::HashMap, fmt, net::SocketAddr, time::SystemTime};
+use std::{
+    collections::HashMap,
+    fmt,
+    net::SocketAddr,
+    time::{Duration, SystemTime},
+};
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 const MAX_CLIENT_BUFFER: usize = 1024;
 
 /// A client subscription.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Subscription {
     /// A random subscriptionId that is generated when creating a subscription.
     /// This is also passed when sending SubscriptionNotifications.
@@ -43,9 +49,18 @@ pub struct Subscription {
     to_client_tx: Sender<Result<ActionSuccessResponse, ActionErrorResponse>>,
 }
 
+impl Subscription {
+    fn is_periodic(&self) -> bool {
+        self.filters
+            .as_ref()
+            .and_then(|f| f.interval.as_ref())
+            .is_some()
+    }
+}
+
 impl fmt::Display for Subscription {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Subscription path: {}", self.path,)
+        write!(f, "Subscription path: {}", self.path)
     }
 }
 
@@ -54,6 +69,7 @@ pub struct Client {
     pub socket_addr: SocketAddr,
     pub to_client_tx: Sender<Result<ActionSuccessResponse, ActionErrorResponse>>,
     pub subscriptions: HashMap<SubscriptionID, ActionPath>,
+    pub periodic_subscription_handles: HashMap<SubscriptionID, JoinHandle<()>>,
 }
 
 impl fmt::Display for Client {
@@ -94,12 +110,17 @@ pub struct SignalServer {
 
     /// List of subscribers to update once a signal is updated
     subscriptions: HashMap<ActionPath, Vec<Subscription>>,
+
+    /// Stream of subscriptions that are notified based on a requested interval
+    periodic_subscriptions_tx: Sender<Subscription>,
+    periodic_subscriptions_rx: Receiver<Subscription>,
 }
 
 impl SignalServer {
     pub fn new() -> Self {
         let (clients_tx, clients_rx) = channel(MAX_CLIENT_BUFFER);
         let (signals_tx, signals_rx) = channel(MAX_CLIENT_BUFFER);
+        let (periodic_subscriptions_tx, periodic_subscriptions_rx) = channel(MAX_CLIENT_BUFFER);
 
         Self {
             clients_tx,
@@ -109,6 +130,8 @@ impl SignalServer {
             clients: HashMap::new(),
             signal_cache: HashMap::new(),
             subscriptions: HashMap::new(),
+            periodic_subscriptions_tx,
+            periodic_subscriptions_rx,
         }
     }
 
@@ -155,6 +178,20 @@ impl SignalServer {
         }
     }
 
+    async fn periodic_notify_stream(
+        mut periodic_subscriptions_tx: Sender<Subscription>,
+        interval_secs: u64,
+        subscription: Subscription,
+    ) {
+        let mut notify_stream = tokio::time::interval(Duration::from_secs(interval_secs));
+        while let _ = notify_stream.tick().await {
+            periodic_subscriptions_tx
+                .send(subscription.clone())
+                .await
+                .unwrap();
+        }
+    }
+
     /// Respond to a client's `Subscribe` request.
     /// The client will be notified of updates for the specified path
     /// afterwards.
@@ -164,6 +201,7 @@ impl SignalServer {
         path: ActionPath,
         request_id: ReqID,
         filters: Option<Filters>,
+        periodic_subscriptions_tx: Sender<Subscription>,
     ) -> Result<ActionSuccessResponse, ActionErrorResponse> {
         let subscription_id = SubscriptionID::SubscriptionIDUUID(Uuid::new_v4());
         debug!(
@@ -174,12 +212,31 @@ impl SignalServer {
         let subscription = Subscription {
             subscription_id,
             path: path.clone(),
-            filters,
+            filters: filters.clone(),
             latest_signal_value: None,
             last_signal_value_client: None,
             to_client_tx: client.to_client_tx.clone(),
-            // interval_handle: None,
         };
+
+        if let Some(ref filters) = filters {
+            if let Some(interval_secs) = filters.interval {
+                // Start a stream that will periodically retrieve the signal from the
+                // signal cache and send the value to the client
+                let periodic_subscriptions_tx = periodic_subscriptions_tx.clone();
+                let join_handle = tokio::spawn(Self::periodic_notify_stream(
+                    periodic_subscriptions_tx,
+                    interval_secs,
+                    subscription.clone(),
+                ));
+                client
+                    .periodic_subscription_handles
+                    .insert(subscription_id.clone(), join_handle);
+                debug!(
+                    "Spawned periodic subscription:{} to path: {}",
+                    subscription_id, &path
+                );
+            }
+        }
 
         if let Some(path_subscriptions) = subscriptions.get_mut(&path) {
             path_subscriptions.push(subscription);
@@ -211,7 +268,7 @@ impl SignalServer {
         for (sub_id, path) in client.subscriptions.iter() {
             Self::remove_server_subscription(subscriptions, sub_id, path);
         }
-
+        client.periodic_subscription_handles.clear();
         client.subscriptions.clear();
         debug!("Cleared client {}, {} subscriptions", client, len);
 
@@ -231,6 +288,9 @@ impl SignalServer {
     ) -> Result<ActionSuccessResponse, ActionErrorResponse> {
         if let Some(path) = client.subscriptions.remove(&subscription_id) {
             Self::remove_server_subscription(subscriptions, &subscription_id, &path);
+            client
+                .periodic_subscription_handles
+                .remove(&subscription_id);
             debug!(
                 "Removed client {} subscription: {}",
                 client, subscription_id
@@ -266,7 +326,17 @@ impl SignalServer {
                     path,
                     request_id,
                     filters,
-                } => Self::handle_subscribe(&mut client, subscriptions, path, request_id, filters),
+                } => {
+                    let periodic_subscriptions_tx = self.periodic_subscriptions_tx.clone();
+                    Self::handle_subscribe(
+                        &mut client,
+                        subscriptions,
+                        path,
+                        request_id,
+                        filters,
+                        periodic_subscriptions_tx,
+                    )
+                }
                 Action::UnsubscribeAll { request_id } => {
                     Self::handle_unsubscribe_all(&mut client, subscriptions, request_id)
                 }
@@ -367,6 +437,9 @@ impl SignalServer {
                         // Notify all path subscribers
                         if let Some(mut client_subscriptions) = self.subscriptions.get_mut(&path) {
                             for sub in client_subscriptions {
+                                if sub.is_periodic() {
+                                    continue;
+                                }
 
                                 let filter_result = filter::matches(&value, &sub.last_signal_value_client, &sub.filters);
                                 match filter_result {
@@ -405,6 +478,40 @@ impl SignalServer {
                         self.process_client_requests(client_action).await;
                     }
                 },
+                sub = self.periodic_subscriptions_rx.next().fuse() => {
+                    if let Some(mut sub) = sub {
+                        if let Some(value) = self.signal_cache.get(&sub.path) {
+                        let filter_result = filter::matches(&value, &sub.last_signal_value_client, &sub.filters);
+                            match filter_result {
+                                // Filter matches
+                                Ok(true) => {
+                                    debug!(
+                                        "Notifiying SubscriptionId {} of value change",
+                                        sub.subscription_id
+                                    );
+                                    let response = ActionSuccessResponse::Subscription {
+                                        subscription_id: sub.subscription_id,
+                                        timestamp: unix_timestamp_ms(),
+                                        value: value.clone(),
+                                    };
+                                    sub.last_signal_value_client = Some((SystemTime::now(), value.clone()));
+                                    sub.to_client_tx.send(Ok(response)).await.unwrap();
+                                },
+                                // Filter criteria does not match
+                                Ok(false) => {
+                                    debug!(
+                                        "Update does not match filter for SubscriptionId {}",
+                                        sub.subscription_id
+                                    );
+                                },
+                                Err(filter::Error::ValueIsNotANumber) => {
+                                    let response = new_subscription_notification_error(sub.subscription_id, BAD_REQUEST_FILTER_INVALID.into());
+                                    sub.to_client_tx.send(Err(response)).await.unwrap();
+                                },
+                            }
+                        }
+                    }
+                }
             };
         }
     }

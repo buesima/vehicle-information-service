@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 mod api_error;
 mod api_type;

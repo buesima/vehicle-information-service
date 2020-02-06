@@ -40,6 +40,7 @@ impl WebsocketServer {
             socket_addr: socket_addr.clone(),
             to_client_tx: to_client_tx.clone(), // Must be cloned, the channel is closed otherwise
             subscriptions: HashMap::new(),
+            periodic_subscription_handles: HashMap::new(),
         };
 
         tx_client_action
