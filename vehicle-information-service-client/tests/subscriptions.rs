@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 use futures::prelude::*;
-use runtime::native::Native;
-use vehicle_information_service::api_type::*;
+use vehicle_information_service::*;
 use vehicle_information_service_client::*;
 
-#[runtime::test(Native)]
+#[tokio::test]
 async fn receive_subscribe_async() -> Result<(), VISClientError> {
     let client = VISClient::connect("ws://127.0.0.1:14430").await?;
     let mut sub_stream = client
@@ -36,7 +35,7 @@ async fn receive_subscribe_async() -> Result<(), VISClientError> {
     Ok(())
 }
 
-#[runtime::test(Native)]
+#[tokio::test]
 async fn receive_subscription_async() -> Result<(), VISClientError> {
     let client = VISClient::connect("ws://127.0.0.1:14430").await?;
     let mut sub_stream = client

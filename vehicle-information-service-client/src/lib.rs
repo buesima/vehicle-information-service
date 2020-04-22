@@ -1,53 +1,42 @@
 // SPDX-License-Identifier: MIT
 
-use futures::compat::*;
+use async_tungstenite::WebSocketStream;
+use async_tungstenite::{
+    tokio::{connect_async, TokioAdapter},
+    tungstenite::error::Error as WsError,
+    tungstenite::protocol::Message,
+};
 use futures::prelude::*;
+use futures::stream::SplitSink;
+use futures::stream::SplitStream;
+use futures_util::{future, StreamExt};
 use log::{debug, error, warn};
 use serde::de::DeserializeOwned;
 use serde_json;
 use std::convert::Into;
 use std::io;
 use std::sync::{Arc, Mutex};
-use tokio::prelude::{Sink, Stream};
-use tokio_tcp::TcpStream;
-use vehicle_information_service::api_type::*;
-use websocket::{ClientBuilder, OwnedMessage, WebSocketError};
+use thiserror::Error;
+use tokio::net::TcpStream;
 
-pub use vehicle_information_service::api_error::ActionErrorResponse;
-pub use vehicle_information_service::api_type::{ActionPath, ReqID, SubscriptionID};
+pub use vehicle_information_service::{
+    Action, ActionErrorResponse, ActionPath, ActionSuccessResponse, Filters, ReqID, SubscriptionID,
+};
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum VISClientError {
-    WebSocketError(WebSocketError),
-    SerdeError(serde_json::Error),
-    IoError(io::Error),
-    UrlParseError(url::ParseError),
+    #[error("WebsocketError")]
+    WebSocketError(#[from] WsError),
+    #[error("SerdeError")]
+    SerdeError(#[from] serde_json::Error),
+    #[error("IoError")]
+    IoError(#[from] io::Error),
+    #[error("Url parsing error")]
+    UrlParseError(#[from] url::ParseError),
+    #[error("VIS error")]
     VisError(ActionErrorResponse),
-    Other,
-}
-
-impl From<WebSocketError> for VISClientError {
-    fn from(ws_error: WebSocketError) -> Self {
-        VISClientError::WebSocketError(ws_error)
-    }
-}
-
-impl From<serde_json::Error> for VISClientError {
-    fn from(json_error: serde_json::Error) -> Self {
-        VISClientError::SerdeError(json_error)
-    }
-}
-
-impl From<io::Error> for VISClientError {
-    fn from(io_error: io::Error) -> Self {
-        VISClientError::IoError(io_error)
-    }
-}
-
-impl From<url::ParseError> for VISClientError {
-    fn from(url_error: url::ParseError) -> Self {
-        VISClientError::UrlParseError(url_error)
-    }
+    #[error("Websocket connection lost while waiting for result")]
+    LostConnectionWithoutResponse,
 }
 
 impl From<ActionErrorResponse> for VISClientError {
@@ -61,25 +50,27 @@ type Result<T> = core::result::Result<T, VISClientError>;
 pub struct VISClient {
     #[allow(dead_code)]
     server_address: String,
-    client: websocket::client::r#async::Client<TcpStream>,
+    // client: websocket::client::r#async::Client<TcpStream>,w
+    ws_tx: SplitSink<WebSocketStream<TokioAdapter<TcpStream>>, Message>,
+    ws_rx: SplitStream<WebSocketStream<TokioAdapter<TcpStream>>>,
 }
 
 impl VISClient {
     #[allow(clippy::needless_lifetimes)] // Clippy false positive
     pub async fn connect(server_address: &str) -> Result<Self> {
-        let (client, _headers) = ClientBuilder::new(server_address)?
-            .async_connect_insecure()
-            .compat()
-            .await?;
+        let (ws_stream, _) = connect_async(server_address).await?;
+        let (ws_tx, ws_rx) = ws_stream.split();
+
         debug!("Connected to: {}", server_address);
         Ok(Self {
             server_address: server_address.to_string(),
-            client,
+            ws_tx,
+            ws_rx,
         })
     }
 
     /// Retrieve vehicle signals.
-    pub async fn get<T>(self, path: ActionPath) -> Result<T>
+    pub async fn get<T>(mut self, path: ActionPath) -> Result<T>
     where
         T: DeserializeOwned,
     {
@@ -88,16 +79,14 @@ impl VISClient {
 
         let get_msg = serde_json::to_string(&get)?;
 
-        let (sink, stream) = self.client.split();
+        self.ws_tx.send(Message::Text(get_msg)).await?;
 
-        sink.send(OwnedMessage::Text(get_msg)).compat().await?;
-
-        let get_stream = stream
-            .compat()
+        let get_stream = self
+            .ws_rx
             .map_err(Into::<VISClientError>::into)
             // Filter Websocket text messages
             .try_filter_map(|msg| {
-                if let OwnedMessage::Text(txt) = msg {
+                if let Message::Text(txt) = msg {
                     future::ok(Some(txt))
                 } else {
                     future::ok(None)
@@ -162,9 +151,9 @@ impl VISClient {
     }
 
     /// Subscribe to the given path's vehicle signals.
-    /// This will return a stream containing all incoming values
+    /// This will return aws_rx containing all incoming values
     pub async fn subscribe_raw(
-        self,
+        mut self,
         path: ActionPath,
         filters: Option<Filters>,
     ) -> Result<impl TryStream<Ok = ActionSuccessResponse, Error = VISClientError>> {
@@ -177,15 +166,11 @@ impl VISClient {
 
         let subscribe_msg = serde_json::to_string(&subscribe)?;
 
-        let (sink, stream) = self.client.split();
+        self.ws_tx.send(Message::Text(subscribe_msg)).await?;
 
-        sink.send(OwnedMessage::Text(subscribe_msg))
-            .compat()
-            .await?;
-
-        Ok(stream.compat().map_err(Into::into).try_filter_map(|msg| {
+        Ok(self.ws_rx.map_err(Into::into).try_filter_map(|msg| {
             debug!("VIS Message {:#?}", msg);
-            if let OwnedMessage::Text(txt) = msg {
+            if let Message::Text(txt) = msg {
                 match serde_json::from_str::<ActionSuccessResponse>(&txt) {
                     Ok(success_response) => future::ok(Some(success_response)),
                     // propagate deserialize error to stream
@@ -199,15 +184,13 @@ impl VISClient {
 
     /// Subscribe to the given path's vehicle signals.
     pub async fn subscribe<T>(
-        self,
+        mut self,
         path: ActionPath,
         filters: Option<Filters>,
     ) -> Result<impl TryStream<Ok = (SubscriptionID, T), Error = VISClientError>>
     where
         T: DeserializeOwned,
     {
-        let (sink, stream) = self.client.split();
-
         let request_id = ReqID::default();
         let subscribe = Action::Subscribe {
             path,
@@ -218,19 +201,17 @@ impl VISClient {
         let subscribe_msg = serde_json::to_string(&subscribe)?;
 
         // Send subscribe request to server
-        sink.send(OwnedMessage::Text(subscribe_msg))
-            .compat()
-            .await?;
+        self.ws_tx.send(Message::Text(subscribe_msg)).await?;
 
         let subscription_id: Arc<Mutex<Option<SubscriptionID>>> = Default::default();
 
-        Ok(stream
-            .compat()
+        Ok(self
+            .ws_rx
             .map_err::<VISClientError, _>(Into::into)
             .try_filter_map(move |msg| {
                 debug!("VIS Message {:#?}", msg);
 
-                if let OwnedMessage::Text(txt) = msg {
+                if let Message::Text(txt) = msg {
                     match serde_json::from_str::<ActionSuccessResponse>(&txt) {
                         Ok(ActionSuccessResponse::Subscribe {
                             subscription_id: resp_subscription_id,
@@ -274,7 +255,7 @@ impl VISClient {
     }
 
     /// Subscribe to the given path's vehicle signals.
-    pub async fn unsubscribe_all<T>(self) -> Result<impl Stream<Item = (), Error = VISClientError>>
+    pub async fn unsubscribe_all<T>(mut self) -> Result<()>
     where
         T: DeserializeOwned,
     {
@@ -283,44 +264,38 @@ impl VISClient {
 
         let unsubscribe_all_msg = serde_json::to_string(&unsubscribe_all)?;
 
-        let (sink, stream) = self.client.split();
+        self.ws_tx.send(Message::Text(unsubscribe_all_msg)).await?;
 
-        sink.send(OwnedMessage::Text(unsubscribe_all_msg))
-            .compat()
-            .await?;
+        while let Some(Ok(msg)) = self.ws_rx.next().await {
+            debug!("VIS Message {:#?}", msg);
 
-        Ok(stream
-            .filter_map(move |msg| {
-                debug!("VIS Message {:#?}", msg);
+            if let Message::Text(txt) = msg {
+                let action_success = serde_json::from_str::<ActionSuccessResponse>(&txt);
 
-                if let OwnedMessage::Text(txt) = msg {
-                    let action_success = serde_json::from_str::<ActionSuccessResponse>(&txt);
-
-                    match action_success {
-                        Ok(ActionSuccessResponse::UnsubscribeAll {
-                            request_id: resp_request_id,
-                            ..
-                        }) => {
-                            // Request id mismatch
-                            if resp_request_id != request_id {
-                                return None;
-                            }
-
-                            Some(())
+                match action_success {
+                    Ok(ActionSuccessResponse::UnsubscribeAll {
+                        request_id: resp_request_id,
+                        ..
+                    }) => {
+                        // Request id mismatch
+                        if resp_request_id != request_id {
+                            continue;
                         }
-                        Ok(_) => None,
-                        Err(serde_error) => {
-                            warn!(
-                                "Failed to deserialize stream response, error: {}",
-                                serde_error
-                            );
-                            None
-                        }
+
+                        return Ok(());
                     }
-                } else {
-                    None
+                    Ok(_) => continue,
+                    Err(serde_error) => {
+                        warn!(
+                            "Failed to deserialize stream response, error: {}",
+                            serde_error
+                        );
+                        return Err(serde_error.into());
+                    }
                 }
-            })
-            .map_err(Into::into))
+            }
+        }
+
+        return Err(VISClientError::LostConnectionWithoutResponse);
     }
 }

@@ -7,7 +7,7 @@ use actix_web::{web, App, HttpResponse};
 use runtime::native::Native;
 use vehicle_information_service_client::*;
 
-#[runtime::test(Native)]
+#[tokio::test]
 async fn receive_get_async() -> Result<(), VISClientError> {
     let mut srv = TestServer::new(
         || HttpService::new(
@@ -23,7 +23,7 @@ async fn receive_get_async() -> Result<(), VISClientError> {
     Ok(())
 }
 
-#[runtime::test(Native)]
+#[tokio::test]
 async fn get_invalid_path_should_return_invalid_path() -> Result<(), VISClientError> {
     let client = VISClient::connect("ws://127.0.0.1:14430").await?;
     let response: Result<u32, VISClientError> = client.get("Invalid.Path".into()).await;
