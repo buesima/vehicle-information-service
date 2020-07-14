@@ -9,7 +9,7 @@ e.g. testing and verifying the program with regard to your specific use.
 The program was tested solely for our own use cases, which might differ from yours.
 
 # Example
-The "get"-example will run a get request, asking for the value of "Private.Example.Interval".
+The "get"-example will run a get request, asking for the value of "Private.Example.Timestamp".
 Make sure the vehicle-communication-service example server is running and run.
 ```
 cargo run --example get

@@ -8,7 +8,7 @@ use vehicle_information_service_client::*;
 async fn receive_subscribe_async() -> Result<(), VISClientError> {
     let client = VISClient::connect("ws://127.0.0.1:14430").await?;
     let mut sub_stream = client
-        .subscribe_raw("Private.Example.Interval".into(), None)
+        .subscribe_raw("Private.Example.Timestamp".into(), None)
         .await
         .expect("Failed to subscribe");
     let subscribe = sub_stream.try_next().await.expect("No next value");
@@ -39,7 +39,7 @@ async fn receive_subscribe_async() -> Result<(), VISClientError> {
 async fn receive_subscription_async() -> Result<(), VISClientError> {
     let client = VISClient::connect("ws://127.0.0.1:14430").await?;
     let mut sub_stream = client
-        .subscribe::<u32>("Private.Example.Interval".into(), None)
+        .subscribe::<u32>("Private.Example.Timestamp".into(), None)
         .await
         .expect("Failed to subscribe");
     let response = sub_stream.try_next().await.expect("No next value");

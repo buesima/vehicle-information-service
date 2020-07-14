@@ -73,13 +73,13 @@ RUST_LOG=debug cargo run --example server -- --port 14430 --can vcan0
 ```
 # Open websocket connection with wscat
 wscat -c "localhost:14430"
-{ "action": "subscribe", "path": "Private.Example.Interval", "requestId": "d2c7c1a2-f5aa-4fce-9d34-3323fdf20236"}
-{ "action": "subscribe", "path": "Private.Example.Interval", "requestId": "1005", "filters": { "range": { "above": 5, "below": 10 } }}
-{ "action": "subscribe", "path": "Private.Example.Interval", "requestId": "1006", "filters": { "minChange": "abc" } }
-{ "action": "subscribe", "path": "Private.Example.Interval", "requestId": "1007", "filters": { "interval": 3, "range": { "above": 10, "below": 20 } } }
+{ "action": "subscribe", "path": "Private.Example.Timestamp", "requestId": "d2c7c1a2-f5aa-4fce-9d34-3323fdf20236"}
+{ "action": "subscribe", "path": "Private.Example.Timestamp", "requestId": "1005", "filters": { "range": { "above": 5, "below": 10 } }}
+{ "action": "subscribe", "path": "Private.Example.Timestamp", "requestId": "1006", "filters": { "minChange": "abc" } }
+{ "action": "subscribe", "path": "Private.Example.Timestamp", "requestId": "1007", "filters": { "interval": 3, "range": { "above": 10, "below": 20 } } }
 { "action": "unsubscribe", "subscriptionId": "4afdcdce-d5f9-48de-8f8e-1250e53b2dcd", "requestId": "1008"}
 { "action": "unsubscribeAll", "requestId": "1009"}
-{ "action": "get", "path": "Private.Example.Interval", "requestId": "1010"}
+{ "action": "get", "path": "Private.Example.Timestamp", "requestId": "1010"}
 { "action": "get", "path": "Private.Example.SocketCan.Last.Frame.Id", "requestId": "1011"}
 { "action": "subscribe", "path": "Private.Example.SocketCan.Last.Frame.Id", "requestId": "1012"}
 ```
@@ -89,7 +89,7 @@ wscat -c "localhost:14430"
 $ wscat -c "localhost:14430"
 
 connected (press CTRL+C to quit)
-> { "action": "subscribe", "path": "Private.Example.Interval", "requestId": "1004"}
+> { "action": "subscribe", "path": "Private.Example.Timestamp", "requestId": "1004"}
 
 < {"action":"subscribe","requestId":"1004","subscriptionId":"2b1c7a38-0c6d-4eb3-a5cb-352245bfd596","timestamp":1511351899913}
 

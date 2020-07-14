@@ -49,7 +49,7 @@ struct Opt {
 /// Connect with websocket client using e.g. wscat
 /// ```
 /// wscat -c "localhost:14430"
-/// { "action": "Subscribe", "path": "Private.Example.Interval", "requestId": 104 }
+/// { "action": "Subscribe", "path": "Private.Example.Timestamp", "requestId": 104 }
 /// ```
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {

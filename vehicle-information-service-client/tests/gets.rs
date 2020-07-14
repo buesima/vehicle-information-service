@@ -5,8 +5,8 @@ use vehicle_information_service_client::*;
 #[tokio::test]
 async fn receive_get_async() -> Result<(), VISClientError> {
     let client = VISClient::connect("ws://127.0.0.1:14430").await?;
-    let interval: u32 = client.get("Private.Example.Interval".into()).await?;
-    assert!(interval > 0);
+    let timestamp: u32 = client.get("Private.Example.Timestamp".into()).await?;
+    assert!(timestamp > 0);
 
     Ok(())
 }

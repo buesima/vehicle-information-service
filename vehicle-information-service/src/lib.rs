@@ -17,8 +17,10 @@ use std::{
 };
 use websocket_server::WebsocketServer;
 
-pub use crate::api_error::ActionErrorResponse;
-pub use crate::api_type::{Action, ActionPath, ActionSuccessResponse, Filters, ReqID, SubscriptionID};
+pub use crate::{
+    api_error::ActionErrorResponse,
+    api_type::{Action, ActionPath, ActionSuccessResponse, Filters, ReqID, SubscriptionID},
+};
 pub use serde_json::{json, Value};
 
 pub(crate) fn unix_timestamp() -> Option<Duration> {
